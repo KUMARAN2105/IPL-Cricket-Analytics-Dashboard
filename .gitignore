@@ -1,0 +1,22 @@
+# Visual Studio files
+.vscode/
+
+# Power BI files
+*.pbix.user
+*.pbit.user
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
