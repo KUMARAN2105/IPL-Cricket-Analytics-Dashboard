@@ -13,6 +13,7 @@ OUTPUT_DIR = BASE_DIR / "dashboard"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_FILE = OUTPUT_DIR / "batting_dashboard.html"
 STYLES_FILE = OUTPUT_DIR / "styles.css"
+LOGO_FILE = BASE_DIR / "powerbi" / "logo.png"
 
 
 def load_batting_data(path: pathlib.Path) -> pd.DataFrame:
@@ -120,7 +121,56 @@ def build_dashboard(df: pd.DataFrame) -> str:
         title="Dismissal Status Distribution",
     )
 
-    figs = [top_batsmen_fig, position_runs_fig, position_sr_fig, team_runs_fig, status_fig]
+    # Additional charts for richer analysis
+    runs_dist_fig = px.histogram(
+        df,
+        x="runs",
+        nbins=20,
+        title="Distribution of Runs per Innings",
+        labels={"runs": "Runs", "count": "Count"},
+    )
+
+    strike_rate_scatter = px.scatter(
+        df,
+        x="balls",
+        y="runs",
+        color="SR",
+        size="4s",
+        hover_data=["batsmanName", "SR"],
+        title="Balls Faced vs Runs Scored (colored by SR)",
+        labels={"balls": "Balls Faced", "runs": "Runs", "SR": "Strike Rate"},
+    )
+
+    dismissal_by_pos = df[df["battingPos"] <= 11].copy()
+    dismissal_pos_fig = px.bar(
+        dismissal_by_pos,
+        x="battingPos",
+        color="Out_Not_Out",
+        title="Dismissals by Batting Position",
+        labels={"battingPos": "Position", "Out_Not_Out": "Status"},
+    )
+
+    high_scores = df[df["runs"] >= 30].copy().sort_values("runs", ascending=False).head(15)
+    high_scores_fig = px.bar(
+        high_scores,
+        x="batsmanName",
+        y="runs",
+        color="SR",
+        title="High Scores (30+ runs) - Top 15",
+        labels={"batsmanName": "Batsman", "runs": "Runs", "SR": "Strike Rate"},
+    )
+
+    figs = [
+        top_batsmen_fig,
+        position_runs_fig,
+        position_sr_fig,
+        team_runs_fig,
+        status_fig,
+        runs_dist_fig,
+        strike_rate_scatter,
+        dismissal_pos_fig,
+        high_scores_fig,
+    ]
 
     # assemble charts into a grid
     chart_divs = []
@@ -128,20 +178,62 @@ def build_dashboard(df: pd.DataFrame) -> str:
         fig_html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn" if index == 0 else False)
         chart_divs.append(f"<div class=\"chart\">{fig_html}</div>")
 
-    charts_html = "\n".join(chart_divs)
+        charts_html = "\n".join(chart_divs)
 
-    head = (
-        "<head>"
-        + "<meta charset=\"utf-8\">"
-        + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-        + f"<title>{title}</title>"
-        + "<link rel=\"stylesheet\" href=\"styles.css\">"
-        + "</head>"
-    )
+        head = (
+                "<head>"
+                + "<meta charset=\"utf-8\">"
+                + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+                + f"<title>{title}</title>"
+                + "<link rel=\"stylesheet\" href=\"styles.css\">"
+                + "</head>"
+        )
 
-    body = f"<body>{summary}<div class=\"charts-grid\">{charts_html}</div></body>"
-    page = f"<html>{head}{body}</html>"
-    return page
+        # header with optional logo and action buttons
+        logo_rel = "powerbi/logo.png" if LOGO_FILE.exists() else None
+        logo_img = f"<img src='{logo_rel}' alt='logo' class='logo'/>" if logo_rel else ""
+        header_html = (
+                "<header class='header'>"
+                + "<div class='header-left'>"
+                + logo_img
+                + f"<div class='header-title'><h2>{title}</h2></div>"
+                + "</div>"
+                + "<div class='header-right'>"
+                + "<button id='printBtn' class='btn'>Print</button>"
+                + "<button id='downloadBtn' class='btn'>Download Charts</button>"
+                + "</div>"
+                + "</header>"
+        )
+
+        # small JS to wire up print and download actions for Plotly charts
+        script = '''
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const printBtn = document.getElementById('printBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    if(printBtn) printBtn.addEventListener('click', ()=> window.print());
+    if(downloadBtn) downloadBtn.addEventListener('click', async ()=>{
+        const plots = document.querySelectorAll('.plotly-graph-div');
+        for(let i=0;i<plots.length;i++){
+            const plot = plots[i];
+            try{
+                const url = await Plotly.toImage(plot, {format:'png', height:800, width:1200});
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `chart-${i+1}.png`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }catch(e){console.warn('Export failed', e)}
+        }
+    });
+});
+</script>
+'''
+
+        body = f"<body>{header_html}{summary}<div class=\"charts-grid\">{charts_html}</div>{script}</body>"
+        page = f"<html>{head}{body}</html>"
+        return page
 
 
 def save_dashboard(html: str, path: pathlib.Path) -> None:
@@ -162,6 +254,13 @@ body{font-family:Inter,Segoe UI,Arial,sans-serif;margin:0;background:var(--bg);c
 .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;padding:16px}
 .chart{background:transparent;padding:8px;border-radius:6px}
 @media (max-width:600px){.cards{flex-direction:column}}
+/* header styles */
+.header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:linear-gradient(90deg,rgba(255,255,255,0.02),transparent)}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{height:40px}
+.header-title h2{margin:0;font-size:16px;color:#dceefc}
+.header-right .btn{background:var(--accent);border:none;color:white;padding:8px 12px;border-radius:6px;margin-left:8px;cursor:pointer}
+.header-right .btn:hover{opacity:0.9}
 """
     path.write_text(css, encoding="utf-8")
 

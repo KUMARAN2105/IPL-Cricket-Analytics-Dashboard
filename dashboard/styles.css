@@ -11,3 +11,10 @@ body{font-family:Inter,Segoe UI,Arial,sans-serif;margin:0;background:var(--bg);c
 .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;padding:16px}
 .chart{background:transparent;padding:8px;border-radius:6px}
 @media (max-width:600px){.cards{flex-direction:column}}
+/* header styles */
+.header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:linear-gradient(90deg,rgba(255,255,255,0.02),transparent)}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{height:40px}
+.header-title h2{margin:0;font-size:16px;color:#dceefc}
+.header-right .btn{background:var(--accent);border:none;color:white;padding:8px 12px;border-radius:6px;margin-left:8px;cursor:pointer}
+.header-right .btn:hover{opacity:0.9}
