@@ -33,6 +33,11 @@ Power BI project for IPL cricket analytics, focused on building interactive dash
    .\.venv\Scripts\python.exe scripts\prepare_data.py
    ```
 
+   This will generate:
+   - `data/processed/matches_clean.csv`
+   - `data/processed/batting_summary_clean.csv`
+   - `powerbi/batting_summary_clean.csv`
+
 4. Generate the batting dashboard from `batting_summary.csv`:
 
    ```powershell
@@ -42,7 +47,7 @@ Power BI project for IPL cricket analytics, focused on building interactive dash
    The dashboard HTML file will be saved to `dashboard/batting_dashboard.html`.
 
 5. Add your Power BI report file (`.pbix` or `.pbit`) to `powerbi/`.
-5. Open Power BI Desktop and open the report from the `powerbi/` folder.
+6. Open Power BI Desktop and open the report from the `powerbi/` folder.
 
    Example PowerShell command once a report exists:
 

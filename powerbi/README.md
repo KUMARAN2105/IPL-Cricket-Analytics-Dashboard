@@ -30,3 +30,20 @@ Or from the repository root, run:
 ```powershell
 .\open_powerbi_report.ps1
 ```
+
+## Power BI data for batting summary
+
+The repository now exports a Power BI-ready batting dataset to:
+
+- `powerbi/batting_summary_clean.csv`
+
+To use it in Power BI Desktop:
+
+1. Open Power BI Desktop.
+2. Choose `Get data` → `Text/CSV`.
+3. Select `powerbi/batting_summary_clean.csv`.
+4. Load the table and create visuals such as:
+   - Bar chart of total runs by batsman
+   - Line chart of average strike rate by batting position
+   - Pie chart for dismissal status distribution
+   - Table of highest scoring innings
