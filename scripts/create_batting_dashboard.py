@@ -1,6 +1,9 @@
 import pathlib
 
 import pandas as pd
+import pathlib
+
+import pandas as pd
 import plotly.express as px
 import plotly.io as pio
 
@@ -9,6 +12,7 @@ DATA_FILE = BASE_DIR / "batting_summary.csv"
 OUTPUT_DIR = BASE_DIR / "dashboard"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_FILE = OUTPUT_DIR / "batting_dashboard.html"
+STYLES_FILE = OUTPUT_DIR / "styles.css"
 
 
 def load_batting_data(path: pathlib.Path) -> pd.DataFrame:
@@ -36,15 +40,18 @@ def build_dashboard(df: pd.DataFrame) -> str:
     not_out_count = int((df["Out_Not_Out"] == "Not_Out").sum())
     out_count = int((df["Out_Not_Out"] == "Out").sum())
 
+    # summary as a set of cards for the top of the dashboard
     summary = (
-        f"<h1>{title}</h1>"
-        f"<p><strong>Total innings:</strong> {total_innings}</p>"
-        f"<p><strong>Total runs scored:</strong> {total_runs}</p>"
-        f"<p><strong>Average runs per innings:</strong> {average_runs:.2f}</p>"
-        f"<p><strong>Average strike rate:</strong> {average_sr:.2f}</p>"
-        f"<p><strong>Total fours:</strong> {total_fours}</p>"
-        f"<p><strong>Total sixes:</strong> {total_sixes}</p>"
-        f"<p><strong>Outs:</strong> {out_count}, <strong>Not outs:</strong> {not_out_count}</p>"
+        "<div class=\"summary\">"
+        + f"<div class=\"title\"><h1>{title}</h1></div>"
+        + "<div class=\"cards\">"
+        + f"<div class=\"card\"><div class=\"card-value\">{total_runs}</div><div class=\"card-label\">Total runs</div></div>"
+        + f"<div class=\"card\"><div class=\"card-value\">{total_innings}</div><div class=\"card-label\">Innings</div></div>"
+        + f"<div class=\"card\"><div class=\"card-value\">{average_runs:.2f}</div><div class=\"card-label\">Avg runs</div></div>"
+        + f"<div class=\"card\"><div class=\"card-value\">{average_sr:.2f}</div><div class=\"card-label\">Avg SR</div></div>"
+        + f"<div class=\"card\"><div class=\"card-value\">{total_fours}</div><div class=\"card-label\">Fours</div></div>"
+        + f"<div class=\"card\"><div class=\"card-value\">{total_sixes}</div><div class=\"card-label\">Sixes</div></div>"
+        + "</div></div>"
     )
 
     top_batsmen = (
@@ -115,22 +122,48 @@ def build_dashboard(df: pd.DataFrame) -> str:
 
     figs = [top_batsmen_fig, position_runs_fig, position_sr_fig, team_runs_fig, status_fig]
 
-    html_parts = []
+    # assemble charts into a grid
+    chart_divs = []
     for index, fig in enumerate(figs):
-        html_parts.append(
-            pio.to_html(
-                fig,
-                full_html=False,
-                include_plotlyjs="cdn" if index == 0 else False,
-            )
-        )
+        fig_html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn" if index == 0 else False)
+        chart_divs.append(f"<div class=\"chart\">{fig_html}</div>")
 
-    page = f"<html><head><title>{title}</title></head><body>{summary}{''.join(html_parts)}</body></html>"
+    charts_html = "\n".join(chart_divs)
+
+    head = (
+        "<head>"
+        + "<meta charset=\"utf-8\">"
+        + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+        + f"<title>{title}</title>"
+        + "<link rel=\"stylesheet\" href=\"styles.css\">"
+        + "</head>"
+    )
+
+    body = f"<body>{summary}<div class=\"charts-grid\">{charts_html}</div></body>"
+    page = f"<html>{head}{body}</html>"
     return page
 
 
 def save_dashboard(html: str, path: pathlib.Path) -> None:
     path.write_text(html, encoding="utf-8")
+
+
+def write_styles(path: pathlib.Path) -> None:
+    css = """
+:root{--bg:#0f1724;--card:#0b1220;--accent:#1f6feb;--muted:#9aa4b2;--card-radius:8px}
+*{box-sizing:border-box}
+body{font-family:Inter,Segoe UI,Arial,sans-serif;margin:0;background:var(--bg);color:#e6eef6}
+.summary{padding:20px}
+.title h1{margin:0 0 12px 0;font-size:20px}
+.cards{display:flex;flex-wrap:wrap;gap:12px}
+.card{background:var(--card);padding:14px;border-radius:var(--card-radius);min-width:120px;flex:1 1 120px}
+.card-value{font-size:20px;font-weight:700;color:var(--accent)}
+.card-label{font-size:12px;color:var(--muted);margin-top:6px}
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;padding:16px}
+.chart{background:transparent;padding:8px;border-radius:6px}
+@media (max-width:600px){.cards{flex-direction:column}}
+"""
+    path.write_text(css, encoding="utf-8")
 
 
 def main() -> None:
@@ -139,6 +172,11 @@ def main() -> None:
 
     df = load_batting_data(DATA_FILE)
     html = build_dashboard(df)
+    # write CSS file for styling and then save the HTML dashboard
+    try:
+        write_styles(STYLES_FILE)
+    except Exception:
+        pass
     save_dashboard(html, OUTPUT_FILE)
     print(f"Batting dashboard created: {OUTPUT_FILE}")
 
